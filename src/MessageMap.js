@@ -62,8 +62,9 @@ class MessageMap {
 	}
 
 	async getCorrespondingReverse(direction, bridge, toId) {
+		const reversedDirection = (direction == this.DISCORD_TO_TELEGRAM ? this.TELEGRAM_TO_DISCORD : this.DISCORD_TO_TELEGRAM);
 		try {
-			return await this._db.get(`${bridge.name} ${direction} ${toId} reversed`).then(JSON.parse);
+			return await this._db.get(`${bridge.name} ${reversedDirection} ${toId} reversed`).then(JSON.parse);
 		} catch (err) {
 			return [];
 		}
