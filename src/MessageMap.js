@@ -7,9 +7,6 @@
 const path = require("path");
 const level = require("level-rocksdb");
 
-
-const dbPath = path.join(__dirname, "data", "messageMap");
-
 /********************
  * Create the class *
  ********************/
@@ -18,8 +15,8 @@ const dbPath = path.join(__dirname, "data", "messageMap");
  * Handles mapping between message IDs in discord and telegram, for message editing purposes
  */
 class MessageMap {
-	constructor() {
-		this._db = level(dbPath, { cacheSize: 64 * 1024 * 1024 });  // 64M Cache
+	constructor(dataDir) {
+		this._db = level(path.join(dataDir, "messageMap"), { cacheSize: 64 * 1024 * 1024 });  // 64M Cache
 	}
 
 	async _pushValue(key, value) {

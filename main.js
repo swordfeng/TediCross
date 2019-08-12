@@ -92,7 +92,7 @@ const tgBot = new Telegraf(settings.telegram.token, { channelMode: true });
 const dcBot = new Discord.Client();
 
 // Create a message ID map
-const messageMap = new MessageMap();
+const messageMap = new MessageMap(args.dataDir);
 
 // Create the bridge map
 const bridgeMap = new BridgeMap(settings.bridges.map((bridgeSettings) => new Bridge(bridgeSettings)));
