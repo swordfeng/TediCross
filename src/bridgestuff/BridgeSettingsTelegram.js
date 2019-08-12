@@ -60,6 +60,8 @@ class BridgeSettingsTelegram {
 		 * @type {Boolean}
 		 */
 		this.ignoreCommands = settings.ignoreCommands;
+
+		this.tempChannel = settings.tempChannel;
 	}
 
 	/**

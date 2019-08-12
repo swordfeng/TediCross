@@ -184,6 +184,16 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 
 					// Pass the message on to Telegram
 					try {
+						// Workaround for Discord GIFs
+						if (processedMessage.startsWith("https://tenor.com/view/")) {
+							const channel = bridge.telegram.tempChannel || bridge.telegram.chatId;
+							const tgVideoMessage = await tgBot.telegram.sendVideo(
+								channel,
+								processedMessage
+							);
+							await tgBot.telegram.deleteMessage(channel, tgVideoMessage.message_id);
+						}
+
 						const textToSend = bridge.discord.sendUsernames
 							? `<b>${senderName}</b>\n${processedMessage}`
 							: processedMessage
@@ -199,14 +209,6 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 						// Make the mapping so future edits can work
 						messageMap.insert(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id, tgMessage.message_id);
 
-						if (processedMessage.startsWith("https://tenor.com/view/")) {
-							const tgVideoMessage = await tgBot.telegram.sendVideo(
-								bridge.telegram.chatId,
-								processedMessage
-							);
-							// Make the mapping so future edits can work
-							messageMap.insert(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id, tgVideoMessage.message_id);
-						}
 					} catch (err) {
 						logger.error(`[${bridge.name}] Telegram did not accept a message:`, err);
 						logger.error(`[${bridge.name}] Failed message:`, err);
