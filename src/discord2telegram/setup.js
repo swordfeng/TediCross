@@ -184,31 +184,29 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 
 					// Pass the message on to Telegram
 					try {
-						if(processedMessage.startsWith("https://tenor.com"))
-                                                {
-                                                        const tgMessage = await tgBot.telegram.sendVideo(
-                                                                bridge.telegram.chatId,
-                                                                processedMessage
-                                                        );
-                                                        // Make the mapping so future edits can work
-                                                        messageMap.insert(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id, tgMessage.message_id);
-                                                }
-                                                else {
-                                                        const textToSend = bridge.discord.sendUsernames
-                                                                ? `<b>${senderName}</b>\n${processedMessage}`
-                                                                : processedMessage
-                                                        ;
-                                                        const tgMessage = await tgBot.telegram.sendMessage(
-                                                                bridge.telegram.chatId,
-                                                                textToSend,
-                                                                {
-                                                                        parse_mode: "HTML"
-                                                                }
-                                                        );
+						if (processedMessage.startsWith("https://tenor.com/view/")) {
+							const tgMessage = await tgBot.telegram.sendVideo(
+								bridge.telegram.chatId,
+								processedMessage
+							);
+							// Make the mapping so future edits can work
+							messageMap.insert(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id, tgMessage.message_id);
+						} else {
+							const textToSend = bridge.discord.sendUsernames
+								? `<b>${senderName}</b>\n${processedMessage}`
+								: processedMessage
+							;
+							const tgMessage = await tgBot.telegram.sendMessage(
+								bridge.telegram.chatId,
+								textToSend,
+								{
+									parse_mode: "HTML"
+								}
+							);
 
-                                                        // Make the mapping so future edits can work
-                                                        messageMap.insert(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id, tgMessage.message_id);
-                                                }
+							// Make the mapping so future edits can work
+							messageMap.insert(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id, tgMessage.message_id);
+						}
 					} catch (err) {
 						logger.error(`[${bridge.name}] Telegram did not accept a message:`, err);
 						logger.error(`[${bridge.name}] Failed message:`, err);
