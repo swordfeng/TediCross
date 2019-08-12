@@ -128,7 +128,7 @@ function relayMessage(ctx) {
 		}
 
 		// Make the mapping so future edits can work XXX Only the last chunk is considered
-		ctx.TediCross.messageMap.insert(MessageMap.TELEGRAM_TO_DISCORD, prepared.bridge, ctx.tediCross.messageId, dcMessage.id);
+		await ctx.TediCross.messageMap.insert(MessageMap.TELEGRAM_TO_DISCORD, prepared.bridge, ctx.tediCross.messageId, dcMessage.id);
 	})(ctx.tediCross.prepared);
 }
 
@@ -144,7 +144,7 @@ const handleEdits = createMessageHandler(async (ctx, bridge) => {
 		const tgMessage = ctx.tediCross.message;
 
 		// Find the ID of this message on Discord
-		const [dcMessageId] = ctx.TediCross.messageMap.getCorresponding(MessageMap.TELEGRAM_TO_DISCORD, bridge, tgMessage.message_id);
+		const [dcMessageId] = await ctx.TediCross.messageMap.getCorresponding(MessageMap.TELEGRAM_TO_DISCORD, bridge, tgMessage.message_id);
 
 		// Get the messages from Discord
 		const dcMessage = await ctx.TediCross.dcBot.channels

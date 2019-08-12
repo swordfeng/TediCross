@@ -145,7 +145,7 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 								parse_mode: "HTML"
 							}
 						);
-						messageMap.insert(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id, tgMessage.message_id);
+						await messageMap.insert(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id, tgMessage.message_id);
 					} catch (err) {
 						logger.error(`[${bridge.name}] Telegram did not accept an attachment:`, err);
 					}
@@ -207,7 +207,7 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 						);
 
 						// Make the mapping so future edits can work
-						messageMap.insert(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id, tgMessage.message_id);
+						await messageMap.insert(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id, tgMessage.message_id);
 
 					} catch (err) {
 						logger.error(`[${bridge.name}] Telegram did not accept a message:`, err);
@@ -236,7 +236,7 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 		bridgeMap.fromDiscordChannelId(newMessage.channel.id).forEach(async (bridge) => {
 			try {
 				// Get the corresponding Telegram message ID
-				const [tgMessageId] = messageMap.getCorresponding(MessageMap.DISCORD_TO_TELEGRAM, bridge, newMessage.id);
+				const [tgMessageId] = await messageMap.getCorresponding(MessageMap.DISCORD_TO_TELEGRAM, bridge, newMessage.id);
 
 				// Get info about the sender
 				const senderName = (useNickname && newMessage.member ? newMessage.member.displayName : newMessage.author.username) + (settings.telegram.colonAfterSenderName ? ":" : "");
@@ -278,10 +278,10 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 
 			try {
 				// Get the corresponding Telegram message IDs
-				const tgMessageIds = isFromTelegram
+				const tgMessageIds = await (isFromTelegram
 					? messageMap.getCorrespondingReverse(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id)
 					: messageMap.getCorresponding(MessageMap.DISCORD_TO_TELEGRAM, bridge, message.id)
-				;
+				);
 
 				// Try to delete them
 				await Promise.all(
