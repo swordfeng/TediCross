@@ -13,6 +13,8 @@ const relayOldMessages = require("./relayOldMessages");
 const Bridge = require("../bridgestuff/Bridge");
 const path = require("path");
 const R = require("ramda");
+const { sleepOneMinute } = require("../sleep");
+const helpers = require("./helpers");
 
 /***********
  * Helpers *
@@ -90,6 +92,9 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 	const latestDiscordMessageIds = new LatestDiscordMessageIds(logger, path.join(datadirPath, "latestDiscordMessageIds.json"));
 	const useNickname = settings.discord.useNickname;
 
+	// Set of server IDs. Will be filled when the bot is ready
+	const knownServerIds = new Set();
+
 	// Listen for users joining the server
 	dcBot.on("guildMemberAdd", makeJoinLeaveFunc(logger, "joined", bridgeMap, tgBot));
 
@@ -108,16 +113,35 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 		if (message.channel.type === "text" && message.cleanContent === "/chatinfo") {
 			// It is. Give it
 			message.reply(
-				"serverId: '" + message.guild.id + "'\n" +
-				"channelId: '" + message.channel.id + "'\n"
-			);
+				"\nchannelId: '" + message.channel.id + "'"
+			)
+				.then(sleepOneMinute)
+				.then(info => Promise.all([
+					info.delete(),
+					message.delete()
+				]))
+				.catch(helpers.ignoreAlreadyDeletedError);
 
 			// Don't process the message any further
 			return;
 		}
 
 		// Get info about the sender
-		const senderName = (useNickname && message.member ? message.member.displayName : message.author.username) + (settings.telegram.colonAfterSenderName ? ":" : "");
+		const senderName = R.compose(
+			// Make it HTML safe
+			helpers.escapeHTMLSpecialChars,
+			// Add a colon if wanted
+			R.when(
+				R.always(settings.telegram.colonAfterSenderName),
+				senderName => senderName + ":"
+			),
+			// Figure out what name to use
+			R.ifElse(
+				message => useNickname && !R.isNil(message.member),
+				R.path(["member", "displayName"]),
+				R.path(["author", "username"])
+			)
+		)(message);
 
 		// Check if the message is from the correct chat
 		const bridges = bridgeMap.fromDiscordChannelId(message.channel.id);
@@ -215,13 +239,17 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 					}
 				}
 			});
-		} else if (R.isNil(message.channel.guild) || !bridgeMap.knownDiscordServer(message.channel.guild.id)) {	// Check if it is the correct server
+		} else if (R.isNil(message.channel.guild) || !knownServerIds.has(message.channel.guild.id)) {	// Check if it is the correct server
 			// The message is from the wrong chat. Inform the sender that this is a private bot
 			message.reply(
 				"This is an instance of a TediCross bot, bridging a chat in Telegram with one in Discord. "
 				+ "If you wish to use TediCross yourself, please download and create an instance. "
 				+ "See https://github.com/TediCross/TediCross"
-			);
+			)
+				// Delete it again after some time
+				.then(sleepOneMinute)
+				.then(message => message.delete())
+				.catch(helpers.ignoreAlreadyDeletedError);
 		}
 	});
 
@@ -369,6 +397,22 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 		dcBot.once("ready", () => {
 			// Log the event
 			logger.info(`Discord: ${dcBot.user.username} (${dcBot.user.id})`);
+
+			// Get the server IDs from the channels
+			R.compose(
+				// Add them to the known server ID set
+				R.reduce((knownServerIds, serverId) => knownServerIds.add(serverId), knownServerIds),
+				// Remove the invalid channels
+				R.filter(R.complement(R.isNil)),
+				// Extract the server IDs from the channels
+				R.map(R.path(["guild", "id"])),
+				// Get the channels
+				R.map(channelId => dcBot.channels.get(channelId)),
+				// Get the channel IDs
+				R.map(R.path(["discord", "channelId"])),
+				// Get the bridges
+				R.prop("bridges")
+			)(bridgeMap);
 
 			// Mark the bot as ready
 			resolve();

@@ -11,6 +11,8 @@ const mime = require("mime/lite");
 const request = require("request");
 const handleEntities = require("./handleEntities");
 const Discord = require("discord.js");
+const { sleepOneMinute } = require("../sleep");
+const helpers = require("./helpers");
 
 /***********
  * Helpers *
@@ -198,7 +200,7 @@ function removeD2TBridges(ctx, next) {
 }
 
 /**
- * Removes bridges with the `ignoreCommand` flag from the bridge list
+ * Removes bridges with the `relayCommands` flag set to false from the bridge list
  *
  * @param {Object} ctx	The Telegraf context to use
  * @param {Object} ctx.tediCross	The TediCross object on the context
@@ -208,7 +210,7 @@ function removeD2TBridges(ctx, next) {
  * @returns {undefined}
  */
 function removeBridgesIgnoringCommands(ctx, next) {
-	ctx.tediCross.bridges = R.filter(R.path(["telegram", "ignoreCommands"]), ctx.tediCross.bridges);
+	ctx.tediCross.bridges = R.filter(R.path(["telegram", "relayCommands"]), ctx.tediCross.bridges);
 	next();
 }
 
@@ -267,7 +269,11 @@ function informThisIsPrivateBot(ctx, next) {
 				{
 					parse_mode: "markdown"
 				}
-			),
+			)
+				// Delete it again after a while
+				.then(sleepOneMinute)
+				.then(helpers.deleteMessage(ctx))
+				.catch(helpers.ignoreAlreadyDeletedError),
 		// Otherwise go to next middleware
 		next
 	)(ctx);

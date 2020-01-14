@@ -169,7 +169,7 @@ class Settings {
 
 		// 2019-04-22: Add the `ignoreCommands` option to Telegram
 		for (const bridge of settings.bridges) {
-			if (R.isNil(bridge.telegram.ignoreCommands)) {
+			if (R.isNil(bridge.telegram.ignoreCommands) && R.isNil(bridge.telegram.relayCommands)) {
 				bridge.telegram.ignoreCommands = false;
 			}
 		}
@@ -178,6 +178,20 @@ class Settings {
 		if (R.isNil(settings.discord.maxReplyLines)) {
 			settings.discord.maxReplyLines = 2;
 		}
+
+		// 2019-11-08: Turn `ignoreCommands` into `relayCommands`, as `ignoreCommands` accidently did the opposite of what it was supposed to do
+		for (const bridge of settings.bridges) {
+			if (R.isNil(bridge.telegram.relayCommands)) {
+				bridge.telegram.relayCommands = bridge.telegram.ignoreCommands;
+			}
+			delete bridge.telegram.ignoreCommands;
+		}
+
+		// 2019-11-08: Remove the `serverId` setting from the discord part of the bridges
+		for (const bridge of settings.bridges) {
+			delete bridge.discord.serverId;
+		}
+
 
 		// All done!
 		return settings;
