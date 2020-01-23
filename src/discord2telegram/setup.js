@@ -203,8 +203,10 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 				// Check if there is an ordinary text message
 				if (message.cleanContent) {
 
+					const quotedMessage = processQuote(message.cleanContent, dcBot);
+
 					// Modify the message to fit Telegram
-					const processedMessage = md2html(message.cleanContent);
+					const processedMessage = md2html(quotedMessage);
 
 					// Pass the message on to Telegram
 					try {
@@ -423,6 +425,13 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 	if (!settings.discord.skipOldMessages) {
 		dcBot.ready = relayOldMessages(logger, dcBot, latestDiscordMessageIds, bridgeMap);
 	}
+}
+
+function processQuote(message, dcBot) {
+	if (message.indexOf('@' + dcBot.user.username) === -1) return message;
+	const m = message.match(/^> \*\*(.*)\*\*\n/);
+	if (!m) return message;
+	return message.replace('@' + dcBot.user.username, '@' + m[1]);
 }
 
 /*****************************
