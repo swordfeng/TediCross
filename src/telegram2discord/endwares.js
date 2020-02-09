@@ -141,6 +141,9 @@ function relayMessage(ctx) {
 
 		// Make the mapping so future edits can work XXX Only the last chunk is considered
 		await ctx.TediCross.messageMap.insert(MessageMap.TELEGRAM_TO_DISCORD, prepared.bridge, ctx.tediCross.messageId, dcMessage.id);
+		if (ctx.senderName) {
+			R.forEach(chunk => ctx.TediCross.messageMap.setMessageSender(prepared.bridge, chunk.split("\n", 2).filter(R.identity)[0], ctx.senderName))(chunks);
+		}
 	})(ctx.tediCross.prepared);
 }
 
@@ -169,6 +172,7 @@ const handleEdits = createMessageHandler(async (ctx, bridge) => {
 
 			// Send them in serial, with the attachment first, if there is one
 			await dcMessage.edit(messageText, { attachment: prepared.attachment });
+			ctx.TediCross.messageMap.setMessageSender(bridge, messageText.split("\n", 2).filter(R.identity)[0], ctx.senderName);
 		})(ctx.tediCross.prepared);
 	} catch (err) {
 		// Log it

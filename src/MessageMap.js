@@ -6,6 +6,7 @@
 
 const path = require("path");
 const level = require("level-rocksdb");
+const crypto = require("crypto");
 
 /********************
  * Create the class *
@@ -83,6 +84,18 @@ class MessageMap {
 	 */
 	static get TELEGRAM_TO_DISCORD() {
 		return "t2d";
+	}
+
+	async getMessageSender(bridge, message) {
+		return await this._db.get(`message ${bridge.name} ${this.messageHash(message)}`).catch(() => null);
+	}
+
+	async setMessageSender(bridge, message, sender) {
+		await this._db.put(`message ${bridge.name} ${this.messageHash(message)}`, sender);
+	}
+
+	messageHash(message) {
+		return crypto.createHash('md5').update(message).digest('hex');
 	}
 }
 

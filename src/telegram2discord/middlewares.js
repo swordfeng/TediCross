@@ -488,6 +488,7 @@ function addPreparedObj(ctx, next) {
 			const header = (() => {
 				// Get the name of the sender of this message
 				const senderName = From.makeDisplayName(ctx.TediCross.settings.telegram.useFirstNameInsteadOfUsername, tc.from);
+				ctx.senderName = senderName;
 
 				// Get the name of the original sender, if this is a forward
 				const originalSender = R.isNil(tc.forwardFrom)

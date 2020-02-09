@@ -203,7 +203,7 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 				// Check if there is an ordinary text message
 				if (message.cleanContent) {
 
-					const quotedMessage = processQuote(message.cleanContent, dcBot);
+					const quotedMessage = await processQuote(message.cleanContent, dcBot, messageMap, bridge);
 
 					// Modify the message to fit Telegram
 					const processedMessage = md2html(quotedMessage);
@@ -427,11 +427,22 @@ function setup(logger, dcBot, tgBot, messageMap, bridgeMap, settings, datadirPat
 	}
 }
 
-function processQuote(message, dcBot) {
+async function processQuote(message, dcBot, messageMap, bridge) {
 	if (message.indexOf('@' + dcBot.user.username) === -1) return message;
-	const m = message.match(/^> \*\*(.*)\*\*\n/);
-	if (!m) return message;
-	return message.replace('@' + dcBot.user.username, '@' + m[1]);
+	// try bold username
+	let matchName;
+	matchName = message.match(/^> \*\*(.*)\*\*\n/);
+	if (!matchName) matchName = message.match(/^> \*\*(.*)\*\* \(in reply to/);
+	if (!matchName) matchName = message.match(/^> \*\*.*\*\* \(forwarded by \*\*(.*)\*\*/);
+	if (matchName) return message.replace('@' + dcBot.user.username, '@' + matchName[1]);
+	// try first line
+	const matchLine = message.match(/^> (.*)\n/);
+	if (matchLine) {
+		const line = matchLine[1];
+		const sender = await messageMap.getMessageSender(bridge, line);
+		if (sender) return message.replace('@' + dcBot.user.username, '@' + sender);
+	}
+	return message;
 }
 
 /*****************************
