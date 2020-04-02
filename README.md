@@ -26,7 +26,7 @@ Setting up the bot requires basic knowledge of the command line, which is bash o
  1. Install [nodejs](https://nodejs.org)
  2. Clone this git repo, or download it as a zip or whatever
  3. Open a terminal and enter the repo with the [`cd`](https://en.wikipedia.org/wiki/Cd_(command)) command. Something like `cd Downloads/TediCross-master`. Your exact command may differ
- 4. Run the command `npm install`
+ 4. Run the command `npm install --production`
  5. Make a copy of the file `example.settings.yaml` and name it `settings.yaml`
  6. Aquire a bot token for Telegram ([How to create a Telegram bot](https://core.telegram.org/bots#3-how-do-i-create-a-bot)) and put it in the settings file
    - The Telegram bot must be able to access all messages. Talk to [@BotFather](https://t.me/BotFather) to disable privacy mode for the bot
@@ -60,7 +60,7 @@ As mentioned in the step by step installation guide, there is a settings file. H
 	* `token`: The Discord bot's token. It is needed for the bot to authenticate to the Discord servers and be able to send and receive messages. If set to `"env"`, TediCross will read the token from the environment variable `DISCORD_BOT_TOKEN`
 	* `skipOldMessages`: Whether or not to skip through all previous messages sent since the bot was last turned off and start processing new messages ONLY. Defaults to true. Note that there is no guarantee the old messages will arrive at Telegram in order. **NOTE:** [Telegram has a limit](https://core.telegram.org/bots/faq#my-bot-is-hitting-limits-how-do-i-avoid-this) on how quickly a bot can send messages. If there is a big backlog, this will cause problems
 	* `useNickname`: Uses the sending user's nickname instead of username when relaying messages to Telegram
-	* `displayTelegramReplies`: How to display Telegram replies. Either the string `inline` or `embed`
+	* `displayTelegramReplies`: How to display Telegram replies. Either the string `blockqoute`, `inline` or `embed`
 	* `replyLength`: How many characters of the original message to display on replies
 	* `maxReplyLines`: How many lines of the original message to display on replies
 * `debug`: If set to `true`, activates debugging output from the bot. Defaults to `false`

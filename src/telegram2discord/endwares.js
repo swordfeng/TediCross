@@ -46,7 +46,7 @@ const createMessageHandler = R.curry((func, ctx) => {
  *
  * @returns {undefined}
  */
-function chatinfo(ctx) {
+const chatinfo = ctx => {
 	// Reply with the info
 	ctx.reply(`chatID: ${ctx.tediCross.message.chat.id}`)
 		// Wait some time
@@ -59,7 +59,7 @@ function chatinfo(ctx) {
 			ctx.deleteMessage()
 		]))
 		.catch(helpers.ignoreAlreadyDeletedError);
-}
+};
 
 /**
  * Handles users joining chats
@@ -80,7 +80,7 @@ const newChatMembers = createMessageHandler((ctx, bridge) =>
 		const text = `**${from.firstName} (${R.defaultTo("No username", from.username)})** joined the Telegram side of the chat`;
 
 		// Pass it on
-		ctx.TediCross.dcBot.channels.get(bridge.discord.channelId)
+		helpers.getDiscordChannel(ctx, bridge)
 			.send(text);
 	})(ctx.tediCross.message.new_chat_members)
 );
@@ -102,7 +102,7 @@ const leftChatMember = createMessageHandler((ctx, bridge) => {
 	const text = `**${from.firstName} (${R.defaultTo("No username", from.username)})** left the Telegram side of the chat`;
 
 	// Pass it on
-	ctx.TediCross.dcBot.channels.get(bridge.discord.channelId)
+	helpers.getDiscordChannel(ctx, bridge)
 		.send(text);
 });
 
@@ -115,22 +115,13 @@ const leftChatMember = createMessageHandler((ctx, bridge) => {
  *
  * @returns {undefined}
  */
-function relayMessage(ctx) {
+const relayMessage = ctx =>
 	R.forEach(async prepared => {
 		// Get the channel to send to
-		const channel = ctx.TediCross.dcBot.channels.get(prepared.bridge.discord.channelId);
-
-		// Make the header
-		let header = prepared.header;
-
-		// Handle embed replies
-		if (prepared.embed) {
-			await channel.send(header, { embed: prepared.embed });
-			header = "";
-		}
+		const channel = helpers.getDiscordChannel(ctx, prepared.bridge);
 
 		// Discord doesn't handle messages longer than 2000 characters. Split it up into chunks that big
-		const messageText = header + "\n" + prepared.text;
+		const messageText = prepared.header + "\n" + prepared.text;
 		const chunks = R.splitEvery(2000, messageText);
 
 		// Send them in serial, with the attachment first, if there is one
@@ -145,7 +136,6 @@ function relayMessage(ctx) {
 			R.forEach(chunk => ctx.TediCross.messageMap.setMessageSender(prepared.bridge, chunk.split("\n", 2).filter(R.identity)[0], ctx.senderName))(chunks);
 		}
 	})(ctx.tediCross.prepared);
-}
 
 /**
  * Handles message edits
@@ -162,8 +152,7 @@ const handleEdits = createMessageHandler(async (ctx, bridge) => {
 		const [dcMessageId] = await ctx.TediCross.messageMap.getCorresponding(MessageMap.TELEGRAM_TO_DISCORD, bridge, tgMessage.message_id);
 
 		// Get the messages from Discord
-		const dcMessage = await ctx.TediCross.dcBot.channels
-			.get(bridge.discord.channelId)
+		const dcMessage = await helpers.getDiscordChannel(ctx, bridge)
 			.fetchMessage(dcMessageId);
 
 		R.forEach(async prepared => {
