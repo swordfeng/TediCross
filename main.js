@@ -17,6 +17,7 @@ const jsYaml = require("js-yaml");
 const fs = require("fs");
 const R = require("ramda");
 const os = require("os");
+const child_process = require("child_process");
 
 // Telegram stuff
 const Telegraf = require("telegraf");
@@ -96,6 +97,12 @@ const messageMap = new MessageMap(args.dataDir);
 
 // Create the bridge map
 const bridgeMap = new BridgeMap(settings.bridges.map((bridgeSettings) => new Bridge(bridgeSettings)));
+
+// Start TGS Converter
+const tgsConverter = child_process.spawn('python3', [path.join(__dirname, "TGSConvertService", "server.py"), path.join(args.dataDir, "tgs.sock")]);
+process.on('exit', () => tgsConverter.kill());
+process.on('SIGINT', () => tgsConverter.kill());
+process.on('SIGTERM', () => tgsConverter.kill());
 
 /*********************
  * Set up the bridge *

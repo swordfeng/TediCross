@@ -5,6 +5,7 @@
  **************************/
 
 const R = require("ramda");
+const path = require("path");
 const middlewares = require("./middlewares");
 const endwares = require("./endwares");
 
@@ -49,7 +50,7 @@ function clearOldMessages(tgBot, offset = -1) {
  * @param {BridgeMap} bridgeMap	Map of the bridges to use
  * @param {Settings} settings	The settings to use
  */
-function setup(logger, tgBot, dcBot, messageMap, bridgeMap, settings) {
+function setup(logger, tgBot, dcBot, messageMap, bridgeMap, settings, datadirPath) {
 	tgBot.ready = Promise.all([
 		// Get info about the bot
 		tgBot.telegram.getMe(),
@@ -71,7 +72,8 @@ function setup(logger, tgBot, dcBot, messageMap, bridgeMap, settings) {
 				settings,
 				messageMap,
 				logger,
-				antiInfoSpamSet
+				antiInfoSpamSet,
+				tgsSock: path.join(datadirPath, "tgs.sock"),
 			};
 
 			// Apply middlewares and endwares
@@ -93,6 +95,7 @@ function setup(logger, tgBot, dcBot, messageMap, bridgeMap, settings) {
 			tgBot.use(middlewares.addTextObj);
 			tgBot.use(middlewares.addFileObj);
 			tgBot.use(middlewares.addFileStream);
+			tgBot.use(middlewares.convertTGSSticker);
 			tgBot.use(middlewares.addPreparedObj);
 
 			// Apply endwares

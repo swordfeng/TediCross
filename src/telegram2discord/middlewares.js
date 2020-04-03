@@ -13,6 +13,8 @@ const handleEntities = require("./handleEntities");
 const Discord = require("discord.js");
 const { sleepOneMinute } = require("../sleep");
 const helpers = require("./helpers");
+const net = require("net");
+const fs = require("fs");
 
 /***********
  * Helpers *
@@ -465,6 +467,14 @@ function addFileObj(ctx, next) {
 			)(message.sticker),
 			name: "sticker.webp"
 		};
+		if (message.sticker.is_animated && fs.existsSync(ctx.TediCross.tgsSock)) {
+			ctx.tediCross.file = {
+				type: "sticker",
+				animated: message.sticker.is_animated,
+				id: message.sticker.file_id,
+				name: "sticker.gif"
+			};
+		}
 	} else if (!R.isNil(message.video)) {
 		// Video
 		ctx.tediCross.file = {
@@ -506,6 +516,16 @@ function addFileStream(ctx, next) {
 		})
 		.then(next)
 		.then(R.always(undefined));
+}
+
+function convertTGSSticker(ctx, next) {
+	if (ctx.tediCross.file && ctx.tediCross.file.type === "sticker" && ctx.tediCross.file.animated) {
+		const tgsStream = ctx.tediCross.file.stream;
+		ctx.tediCross.file.stream = net.connect(ctx.TediCross.tgsSock, () => {
+			tgsStream.pipe(ctx.tediCross.file.stream);
+		});
+	}
+	next();
 }
 
 function addPreparedObj(ctx, next) {
@@ -635,5 +655,6 @@ module.exports = {
 	addTextObj,
 	addFileObj,
 	addFileStream,
+	convertTGSSticker,
 	addPreparedObj
 };
