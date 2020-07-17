@@ -61,6 +61,12 @@ class BridgeSettingsTelegram {
 		 */
 		this.relayCommands = settings.relayCommands;
 
+		/**
+		 * Whether or not to delete messages when they are edited to be a single dot
+		 *
+		 * @type {Boolean}
+		 */
+		this.crossDeleteOnDiscord = settings.crossDeleteOnDiscord;
 
 		this.tempChannel = settings.tempChannel;
 	}
@@ -96,6 +102,11 @@ class BridgeSettingsTelegram {
 		// Check that relayCommands is a boolean
 		if (Boolean(settings.relayCommands) !== settings.relayCommands) {
 			throw new Error("`settings.relayCommands` must be a boolean");
+		}
+
+		// Check that crossDeleteOnDiscord is a boolean
+		if (Boolean(settings.crossDeleteOnDiscord) !== settings.crossDeleteOnDiscord) {
+			throw new Error("`settings.crossDeleteOnDiscord` must be a boolean");
 		}
 	}
 }
