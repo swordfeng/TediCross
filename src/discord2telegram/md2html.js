@@ -1,42 +1,42 @@
 "use strict";
 
-/**************************
- * Import important stuff *
- **************************/
-
 const simpleMarkdown = require("simple-markdown");
 const { escapeHTMLSpecialChars } = require("./helpers");
+const R = require("ramda");
 
 /***********
  * Helpers *
  ***********/
 
 /** Map between content types and their HTML tags */
-const tagMap = new Proxy({
-	u: "b",	// Telegram does not support underlined text. Make it bold instead
-	strong: "b",
-	em: "em",
-	inlineCode: "code",
-	codeBlock: "pre"
-}, {
-	get(target, prop) {
-		// Default to not having any tags
-		const tags = {
-			start: "",
-			end: ""
-		};
-		// Check if tags are defined for this type
-		if (prop in target) {
-			// Create the proper tags
-			tags.start = `<${target[prop]}>`;
-			tags.end = `</${target[prop]}>`;
+const tagMap = new Proxy(
+	{
+		u: "u",
+		strong: "b",
+		em: "em",
+		inlineCode: "code",
+		codeBlock: "pre"
+	},
+	{
+		get(target, prop) {
+			// Default to not having any tags
+			const tags = {
+				start: "",
+				end: ""
+			};
+			// Check if tags are defined for this type
+			if (prop in target) {
+				// Create the proper tags
+				tags.start = `<${target[prop]}>`;
+				tags.end = `</${target[prop]}>`;
+			}
+			return tags;
 		}
-		return tags;
 	}
-});
+);
 
 /** Syntax tree node representing a newline */
-const newlineNode = {content: "\n", type: "text"};
+const newlineNode = { content: "\n", type: "text" };
 
 /**
  * Extracts pure texts from a node and its child nodes
@@ -60,10 +60,10 @@ function extractText(node) {
  *********************/
 
 // Ignore some rules which only creates trouble
-["list", "heading"].forEach((type) => {
+["list", "heading"].forEach(type => {
 	simpleMarkdown.defaultRules[type] = {
 		order: Number.POSITIVE_INFINITY,
-		match: () => null	// Never match anything in order to ignore this rule
+		match: () => null // Never match anything in order to ignore this rule
 	};
 });
 
@@ -82,21 +82,28 @@ const mdParse = simpleMarkdown.defaultBlockParse;
  * @return {String}	Telegram-friendly HTML
  */
 function md2html(text) {
+	// XXX Some users get a space after @ in mentions bridged to Telegram. See #148
+	// This is compensation for that discord error
+	text = R.replace("@\u200B", "@", text);
+
 	// Escape HTML in the input
 	const processedText = escapeHTMLSpecialChars(text);
 
 	// Parse the markdown and build HTML out of it
 	const html = mdParse(processedText)
-		.map((rootNode) => {	// Do some node preprocessing
-			let content = rootNode;	// Default to just keeping the node
-			if (rootNode.type === "paragraph") {	// Remove the outer paragraph, if one exists
+		.map(rootNode => {
+			// Do some node preprocessing
+			let content = rootNode; // Default to just keeping the node
+			if (rootNode.type === "paragraph") {
+				// Remove the outer paragraph, if one exists
 				content = rootNode.content;
 			}
 			return content;
 		})
-		.reduce((flattened, nodes) => flattened.concat([newlineNode, newlineNode], nodes), [])	// Flatten the resulting structure
-		.slice(2)	// Remove the two initial newlines created by the previous line
-		.reduce((html, node) => {	// Turn the nodes into HTML
+		.reduce((flattened, nodes) => flattened.concat([newlineNode, newlineNode], nodes), []) // Flatten the resulting structure
+		.slice(2) // Remove the two initial newlines created by the previous line
+		.reduce((html, node) => {
+			// Turn the nodes into HTML
 			// Telegram doesn't support nested tags, so only apply tags to the outer nodes
 			// Get the tag type of this node
 			const tags = tagMap[node.type];

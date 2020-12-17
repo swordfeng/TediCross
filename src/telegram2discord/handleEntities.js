@@ -5,19 +5,13 @@
  **************************/
 
 const R = require("ramda");
+const fetchDiscordChannel = require("../fetchDiscordChannel");
 
 /*********************
  * Make some helpers *
  *********************/
 
-// XXX This is also present in `messageConverter`. Merge somehow
-const findFn = (prop, regexp) => 
-	R.compose(
-		R.not,
-		R.isEmpty,
-		R.match(regexp),
-		R.prop(prop)
-	);
+const findFn = (prop, regexp) => R.compose(R.not, R.isEmpty, R.match(regexp), R.prop(prop));
 
 /*****************************
  * Define the entity handler *
@@ -33,7 +27,7 @@ const findFn = (prop, regexp) =>
  *
  * @return {String} The fully converted string
  */
-function handleEntities(text, entities, dcBot, bridge) {
+async function handleEntities(text, entities, dcBot, bridge) {
 	// Don't mess up the original
 	const substitutedText = text !== undefined ? text.split("") : [""];
 
@@ -46,13 +40,12 @@ function handleEntities(text, entities, dcBot, bridge) {
 	}
 
 	// Iterate over the entities backwards, to not fuck up the offset
-	for (let i = entities.length-1; i >= 0; i--) {
-
+	for (let i = entities.length - 1; i >= 0; i--) {
 		// Select the entity object
 		const e = entities[i];
 
 		// Extract the entity part
-		const part = text.substring(e.offset, e.offset+e.length);
+		const part = text.substring(e.offset, e.offset + e.length);
 
 		// The string to substitute
 		let substitute = part;
@@ -61,18 +54,26 @@ function handleEntities(text, entities, dcBot, bridge) {
 		switch (e.type) {
 			case "mention":
 			case "text_mention": {
-				// A mention. Substitute the Discord user ID or Discord role ID if one exists
-				// XXX Telegram considers it a mention if it is a valid Telegram username, not necessarily taken. This means the mention matches the regexp /^@[a-zA-Z0-9_]{5,}$/
-				// In turn, this means short usernames and roles in Discord, like '@devs', will not be possible to mention
-				const channel = dcBot.channels.get(bridge.discord.channelId);
-				const mentionable = new RegExp(`^${part.substring(1)}$`, "i");
-				const dcUser = channel.members.find(findFn("displayName", mentionable));
-				const dcRole = channel.guild.roles.find(findFn("name", mentionable));
-				if (!R.isNil(dcUser)) {
-					substitute = `<@${dcUser.id}>`;
-				} else if (!R.isNil(dcRole)) {
-					substitute = `<@&${dcRole.id}>`;
-				} // else handled by the default substitute value
+				try {
+					// A mention. Substitute the Discord user ID or Discord role ID if one exists
+					// XXX Telegram considers it a mention if it is a valid Telegram username, not necessarily taken. This means the mention matches the regexp /^@[a-zA-Z0-9_]{5,}$/
+					// In turn, this means short usernames and roles in Discord, like '@devs', will not be possible to mention
+					const channel = await fetchDiscordChannel(dcBot, bridge);
+					const mentionable = new RegExp(`^${part.substring(1)}$`, "i");
+					const dcUser = channel.members.find(findFn("displayName", mentionable));
+					// XXX Could not find a way to actually search for roles. Looking in the cache will mostly work, but I don't think it is guaranteed
+					const dcRole = channel.guild.roles.cache.find(findFn("name", mentionable));
+
+					if (!R.isNil(dcUser)) {
+						substitute = `<@${dcUser.id}>`;
+					} else if (!R.isNil(dcRole)) {
+						substitute = `<@&${dcRole.id}>`;
+					} // else handled by the default substitute value
+				} catch (err) {
+					console.error(
+						`Could not process a mention for Discord channel ${bridge.discord.channelId} on bridge ${bridge.name}: ${err.message}`
+					);
+				}
 				break;
 			}
 			case "code": {
@@ -106,16 +107,31 @@ function handleEntities(text, entities, dcBot, bridge) {
 				substitute = "*" + part + "*";
 				break;
 			}
+			case "underline": {
+				// Underlined text
+				substitute = "__" + part + "__";
+				break;
+			}
 			case "hashtag": {
-				// Possible name of a Discord channel on the same Discord server
-				const channelName = new RegExp(`^${part.substring(1)}$`);
+				try {
+					// Possible name of a Discord channel on the same Discord server
+					const channelName = new RegExp(`^${part.substring(1)}$`);
 
-				// Find out if this is a channel on the bridged Discord server
-				const channel = dcBot.channels.get(bridge.discord.channelId).guild.channels.find(findFn("name", channelName));
+					// Find out if this is a channel on the bridged Discord server
+					const channel = await fetchDiscordChannel(dcBot, bridge.discord.channelId);
+					// XXX Could not find a way to actually search for channels. Looking in the cache will mostly work, but I don't think it is guaranteed
+					const mentionedChannel = channel.guild.channels.cache.find(
+						findFn("name", channelName)
+					);
 
-				// Make Discord recognize it as a channel mention
-				if (channel !== null) {
-					substitute = `<#${channel.id}>`;
+					// Make Discord recognize it as a channel mention
+					if (!R.isNil(mentionedChannel)) {
+						substitute = `<#${mentionedChannel.id}>`;
+					}
+				} catch (err) {
+					console.error(
+						`Could not process a hashtag for Discord channel ${bridge.discord.channelId} on bridge ${bridge.name}: ${err.message}`
+					);
 				}
 				break;
 			}
@@ -123,6 +139,7 @@ function handleEntities(text, entities, dcBot, bridge) {
 			case "bot_command":
 			case "email":
 			default: {
+				console.log(e.type);
 				// Just leave it as it is
 				break;
 			}
@@ -139,14 +156,14 @@ function handleEntities(text, entities, dcBot, bridge) {
 		substitutedText.push("\n\n");
 		for (let i = 0; i < markdownLinks.length; i++) {
 			// Find out where the corresponding text is
-			const index = substitutedText.findIndex((e) => e instanceof Object && e.type === "mdlink");
+			const index = substitutedText.findIndex(e => e instanceof Object && e.type === "mdlink");
 			const obj = substitutedText[index];
 
 			// Replace the object with the proper text and reference
-			substitutedText[index] = `${obj.text}[${i+1}]`;
+			substitutedText[index] = `${obj.text}[${i + 1}]`;
 
 			// Push the link to the end
-			substitutedText.push(`[${i+1}]: ${markdownLinks[i]}\n`);
+			substitutedText.push(`[${i + 1}]: ${markdownLinks[i]}\n`);
 		}
 	}
 

@@ -8,6 +8,7 @@ const R = require("ramda");
 const path = require("path");
 const middlewares = require("./middlewares");
 const endwares = require("./endwares");
+const { sleep } = require("../sleep");
 
 /***********
  * Helpers *
@@ -54,8 +55,8 @@ function setup(logger, tgBot, dcBot, messageMap, bridgeMap, settings, datadirPat
 	tgBot.ready = Promise.all([
 		// Get info about the bot
 		tgBot.telegram.getMe(),
-		// Clear old messages, if wanted
-		settings.telegram.skipOldMessages ? clearOldMessages(tgBot) : Promise.resolve()
+		// Clear old messages, if wanted. XXX Sleep 1 sec if not wanted. See issue #156
+		settings.telegram.skipOldMessages ? clearOldMessages(tgBot) : sleep(1000)
 	])
 		.then(([me]) => {
 			// Log the bot's info
@@ -94,7 +95,7 @@ function setup(logger, tgBot, dcBot, messageMap, bridgeMap, settings, datadirPat
 			tgBot.use(middlewares.addForwardFrom);
 			tgBot.use(middlewares.addTextObj);
 			tgBot.use(middlewares.addFileObj);
-			tgBot.use(middlewares.addFileStream);
+			tgBot.use(middlewares.addFileLink);
 			tgBot.use(middlewares.convertTGSSticker);
 			tgBot.use(middlewares.addPreparedObj);
 
